@@ -34,6 +34,11 @@ class State<T> {
   }
 }
 
+enum ItemPosition {
+  Above = 'above',
+  Below = 'below'
+}
+
 enum insertPosition {
   BeforeEnd = 'beforeend',
   AfterBegin = 'afterbegin'
@@ -96,17 +101,23 @@ class ProjectState extends State<Project> {
     this.updateListeners()
   }
 
-  moveProject(movedProjectItemId: string, status: ProjectStatus, targetProjectItemId?: string) {
+  moveProject(movedProjectItemId: string, status: ProjectStatus, targetProjectItemId?: string, movedItemNewPosition?: ItemPosition) {
     const movedProjectItemIndex: keyof Project[] = this.projects.findIndex(project => project.id === movedProjectItemId) 
     const movedProject = this.projects[movedProjectItemIndex]
     const targetProjectItemIndex: keyof Project[] = this.projects.findIndex(project => project.id === targetProjectItemId)
-    const targetProject = this.projects[targetProjectItemIndex]    
 
     if (movedProject) {      
       if (movedProject.status === status) {
         if (targetProjectItemIndex !== movedProjectItemIndex) {
-          this.projects[targetProjectItemIndex] = movedProject
-          this.projects[movedProjectItemIndex] = targetProject
+          // remove movedItem from position
+          this.projects.splice(movedProjectItemIndex, 1)
+          if (movedItemNewPosition === ItemPosition.Above) {
+            // add the moved project in the position of the target project
+            this.projects.splice(targetProjectItemIndex, 0, movedProject)
+          } else {
+            // add the moved project to a lower position than the target project
+            this.projects.splice(targetProjectItemIndex + 1, 0, movedProject )
+          }
           this.updateListeners()
         }
         return
@@ -286,6 +297,35 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> implements Drag
     }
   }
 
+  getProjectItemPostion(movedElement: HTMLLIElement, targetElement: HTMLLIElement): ItemPosition {
+    console.log('movedElement', movedElement);
+    console.log('targetElement', targetElement);
+    
+    const movedElementCoordinates = movedElement.getBoundingClientRect()
+    const targetElementCoordinates = targetElement.getBoundingClientRect()
+
+    const { top: topOfTargetElement, bottom: bottomOfTargetElement } = targetElementCoordinates
+    const heightOfTargetElement = Math.abs(bottomOfTargetElement - topOfTargetElement)
+    const middlePointOfTargetElement = (heightOfTargetElement / 2) + topOfTargetElement
+
+    const { top: topOfMovedElement } = movedElementCoordinates
+
+    console.log('top of moved element', topOfMovedElement);
+    console.log('top of target element', topOfTargetElement);
+    console.log('bottom of target element', bottomOfTargetElement);
+    console.log('middlepoint of target element', middlePointOfTargetElement);
+    console.log('height of target element', heightOfTargetElement);
+    
+
+    if (topOfMovedElement >= topOfTargetElement) {
+      if (topOfMovedElement <= middlePointOfTargetElement) {
+        return ItemPosition.Above
+      }
+      return ItemPosition.Below
+    }
+    return ItemPosition.Above
+  }
+
 
   @autobind
   dropHandler(event: DragEvent): void {    
@@ -295,20 +335,33 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> implements Drag
       movedProjectItemId = event.dataTransfer.getData('text/plain')
       
       // if event target id is the same as the unordered list element id
+      // if drop target is the UL component (ProjectList)
       if ((event.target as HTMLLIElement).id === this.listElement.id) {
         // this is on the drop zone
         ps.moveProject(movedProjectItemId, this.type)
         return
       }
 
-      const targetProjectItemId = ((event.target as HTMLUListElement).closest('li') as HTMLLIElement).id
+      // if drop target is the project Item
+      const targetProjectItem = ((event.target as HTMLUListElement).closest('li') as HTMLLIElement)
+      const targetProjectItemId = targetProjectItem.id
       const listElements = (event.currentTarget as HTMLUListElement).getElementsByTagName('li')
-      const targetElementIsInListElements = Array.from(listElements).some((elem) => {
-        return elem.id === targetProjectItemId
+      // The error is triggered because typescript sees the variable still as undefined in some scenarios. 
+      // Adding !before variable tells typescript to remove undefined or null as possibles types for variable:
+      let movedProjectItem!: HTMLLIElement
+      const movedElementIsInListElements = Array.from(listElements).some((elem) => {
+        if (elem.id === movedProjectItemId) {
+          movedProjectItem = elem
+        }
+        return elem.id === movedProjectItemId
       })
 
-      if (targetElementIsInListElements) {        
-        ps.moveProject(movedProjectItemId, this.type, targetProjectItemId)
+
+      const itemPosition = this.getProjectItemPostion(movedProjectItem, targetProjectItem)
+      console.log('item position', itemPosition);
+      
+      if (movedElementIsInListElements) {        
+        ps.moveProject(movedProjectItemId, this.type, targetProjectItemId, itemPosition)
       }
 
     }
@@ -316,9 +369,7 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> implements Drag
 
   @autobind
   dragLeaveHandler(_event: DragEvent): void {
-    // if (this.listElement.classList.contains('droppable')) {
-      this.listElement.classList.remove('droppable')
-    // }
+    this.listElement.classList.remove('droppable')
   }
 
   configure() {
