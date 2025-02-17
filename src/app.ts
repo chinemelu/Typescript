@@ -6,6 +6,17 @@ interface Draggable {
   dragEndHandler(event: DragEvent): void
 }
 
+interface DataTransferObject {
+  projectItemId: string;
+  distanceBtwMouseAndProjectItemTop: number
+}
+
+interface MovableItemCoords {
+  top: number;
+  bottom: number;
+  delta: number;
+}
+
 // The drag target is for the ProjectList box
 interface DragTarget {
   dragOverHandler(event: DragEvent): void
@@ -193,6 +204,7 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
 class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> 
   implements Draggable {
   project: Project
+  movableItemCoordinates: MovableItemCoords
 
   get peopleAssignedText() {
     return this.project.people > 1 ? 'people' : 'person'
@@ -207,6 +219,7 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
 
   configure() {
     this.element.draggable = true
+    this.element.addEventListener('drag', this.dragHandler)
     this.element.addEventListener('dragstart', this.dragStartHandler)
     this.element.addEventListener('dragend', this.dragEndHandler)
     this.element.addEventListener('drop', this.handleDropOnProjectItem)
@@ -233,17 +246,38 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
     paragraphEl.textContent = `${people.toString()} ${this.peopleAssignedText} assigned`
   }
 
+  // @autobind
+  // dragHandler(event: DragEvent): void {      
+  //   if (event.dataTransfer && event.currentTarget) {
+  //   }
+  // }
   @autobind
-  dragStartHandler(event: DragEvent): void {    
+  dragStartHandler(event: DragEvent): void {        
     if (event.dataTransfer && event.currentTarget) {
+      const projectItemCoordinates = this.element.getBoundingClientRect()
+      // get client Y mouse position on dragStart
+      const mouseYPosition = event.clientY
+      // get movedItem top coordinate on dragStart
+      const projectItemTop = projectItemCoordinates.top
+      const distanceBtwMouseAndTop = projectItemTop - mouseYPosition
+      // set an object into the setData using JSON.stringify
+      const dataTransferObject: DataTransferObject = {
+        projectItemId: this.element.id,
+        distanceBtwMouseAndProjectItemTop: distanceBtwMouseAndTop
+      }
       // sending an id will help to get a project from the state and save memory
       // the move dropffect gets an appropriate cursor
-      event.dataTransfer.setData("text/plain", this.element.id);
+      event.dataTransfer.setData("text/plain", JSON.stringify(dataTransferObject));
       event.dataTransfer.effectAllowed = 'move'
     }
   }
   @autobind
-  dragEndHandler(_event: DragEvent): void {
+  dragEndHandler(_event: DragEvent): void {    
+  }
+
+  @autobind
+  dragHandler(_event: DragEvent) {
+    
   }
 
   @autobind
@@ -297,24 +331,12 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> implements Drag
     }
   }
 
-  getProjectItemPostion(movedElement: HTMLLIElement, targetElement: HTMLLIElement): ItemPosition {
-    console.log('movedElement', movedElement);
-    console.log('targetElement', targetElement);
-    
-    const movedElementCoordinates = movedElement.getBoundingClientRect()
+  getProjectItemPostion(targetElement: HTMLLIElement, topOfMovedElement: number): ItemPosition {
     const targetElementCoordinates = targetElement.getBoundingClientRect()
 
-    const { top: topOfTargetElement, bottom: bottomOfTargetElement } = targetElementCoordinates
-    const heightOfTargetElement = Math.abs(bottomOfTargetElement - topOfTargetElement)
-    const middlePointOfTargetElement = (heightOfTargetElement / 2) + topOfTargetElement
+    const { top: topOfTargetElement, height } = targetElementCoordinates
+    const middlePointOfTargetElement = (height / 2) + topOfTargetElement
 
-    const { top: topOfMovedElement } = movedElementCoordinates
-
-    console.log('top of moved element', topOfMovedElement);
-    console.log('top of target element', topOfTargetElement);
-    console.log('bottom of target element', bottomOfTargetElement);
-    console.log('middlepoint of target element', middlePointOfTargetElement);
-    console.log('height of target element', heightOfTargetElement);
     
 
     if (topOfMovedElement >= topOfTargetElement) {
@@ -329,40 +351,34 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> implements Drag
 
   @autobind
   dropHandler(event: DragEvent): void {    
-    let movedProjectItemId: string;
+    let movedProjectItemStr: string;
     if (event.currentTarget && event.dataTransfer) {
       this.listElement.classList.remove('droppable')
-      movedProjectItemId = event.dataTransfer.getData('text/plain')
+      movedProjectItemStr = event.dataTransfer.getData('text/plain')
+
+      // parse the object set in setData
+      const movedProjectItemObj = JSON.parse(movedProjectItemStr) as DataTransferObject
+      const movedProjectItemId = movedProjectItemObj.projectItemId
+
+      const distanceBtwMouseAndProjectItemTop = movedProjectItemObj.distanceBtwMouseAndProjectItemTop
+
+      const currentMousePosition = event.clientY
+
+      const topOfMovedElement = currentMousePosition + distanceBtwMouseAndProjectItemTop
       
       // if event target id is the same as the unordered list element id
       // if drop target is the UL component (ProjectList)
-      if ((event.target as HTMLLIElement).id === this.listElement.id) {
+      if ((event.target as HTMLUListElement).id === this.listElement.id) {
         // this is on the drop zone
         ps.moveProject(movedProjectItemId, this.type)
         return
       }
 
       // if drop target is the project Item
-      const targetProjectItem = ((event.target as HTMLUListElement).closest('li') as HTMLLIElement)
+      const targetProjectItem = ((event.target as HTMLUListElement).closest('li') as HTMLLIElement)      
       const targetProjectItemId = targetProjectItem.id
-      const listElements = (event.currentTarget as HTMLUListElement).getElementsByTagName('li')
-      // The error is triggered because typescript sees the variable still as undefined in some scenarios. 
-      // Adding !before variable tells typescript to remove undefined or null as possibles types for variable:
-      let movedProjectItem!: HTMLLIElement
-      const movedElementIsInListElements = Array.from(listElements).some((elem) => {
-        if (elem.id === movedProjectItemId) {
-          movedProjectItem = elem
-        }
-        return elem.id === movedProjectItemId
-      })
-
-
-      const itemPosition = this.getProjectItemPostion(movedProjectItem, targetProjectItem)
-      console.log('item position', itemPosition);
-      
-      if (movedElementIsInListElements) {        
-        ps.moveProject(movedProjectItemId, this.type, targetProjectItemId, itemPosition)
-      }
+      const itemPosition = this.getProjectItemPostion(targetProjectItem, topOfMovedElement)      
+      ps.moveProject(movedProjectItemId, this.type, targetProjectItemId, itemPosition)
 
     }
   }
