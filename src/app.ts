@@ -96,10 +96,6 @@ class ProjectState extends State<Project> {
     return this.instance
   }
 
-  // addListener(listenerFn: Listeners) {
-  //   this.listeners.push(listenerFn)
-  // }
-
   addProject(title: string, description: string, numOfPeople: number, type: ProjectStatus = ProjectStatus.Active, projectId?: string) {
     const newProject = new Project(
       projectId ? projectId: Math.random().toString(),
@@ -112,28 +108,33 @@ class ProjectState extends State<Project> {
     this.updateListeners()
   }
 
+  changeProjectPosition(movedProjectItemIndex: number, targetProjectItemIndex: number, movedProject: Project, movedItemNewPosition: ItemPosition) {    
+    this.projects.splice(movedProjectItemIndex, 1)
+    if (movedItemNewPosition === ItemPosition.Above) {
+      // add the moved project in the position of the target project
+      this.projects.splice(targetProjectItemIndex, 0, movedProject)
+    } else {
+      // add the moved project to a lower position than the target project
+      this.projects.splice(targetProjectItemIndex + 1, 0, movedProject )
+    }
+  }
+
   moveProject(movedProjectItemId: string, status: ProjectStatus, targetProjectItemId?: string, movedItemNewPosition?: ItemPosition) {
     const movedProjectItemIndex: keyof Project[] = this.projects.findIndex(project => project.id === movedProjectItemId) 
     const movedProject = this.projects[movedProjectItemIndex]
     const targetProjectItemIndex: keyof Project[] = this.projects.findIndex(project => project.id === targetProjectItemId)
-
-    if (movedProject) {      
-      if (movedProject.status === status) {
+    // there are 3 possibilities 
+    // 1 - the user is dragging project Item between Active Projects and Finished Projects ProjectList
+    // 2 - the user is dragging project item between a ProjectList (either Active or Finished ProjectList)
+    if (movedProject) { 
+      movedProject.status = status
+      // if within the same ProjectList     
+      if (movedItemNewPosition) {        
         if (targetProjectItemIndex !== movedProjectItemIndex) {
           // remove movedItem from position
-          this.projects.splice(movedProjectItemIndex, 1)
-          if (movedItemNewPosition === ItemPosition.Above) {
-            // add the moved project in the position of the target project
-            this.projects.splice(targetProjectItemIndex, 0, movedProject)
-          } else {
-            // add the moved project to a lower position than the target project
-            this.projects.splice(targetProjectItemIndex + 1, 0, movedProject )
-          }
-          this.updateListeners()
+          this.changeProjectPosition(movedProjectItemIndex, targetProjectItemIndex, movedProject, movedItemNewPosition)
         }
-        return
       }
-      movedProject.status = status
       this.updateListeners()
     }
   }
@@ -233,8 +234,6 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
     }    
   }
 
-
-
   renderContent(): void {
     const h2El = this.element.querySelector('h2') as HTMLHeadingElement
     const h3El = this.element.querySelector('h3') as HTMLHeadingElement
@@ -252,8 +251,8 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
   //   }
   // }
   @autobind
-  dragStartHandler(event: DragEvent): void {        
-    if (event.dataTransfer && event.currentTarget) {
+  dragStartHandler(event: DragEvent): void {            
+    if (event && event.dataTransfer) {
       const projectItemCoordinates = this.element.getBoundingClientRect()
       // get client Y mouse position on dragStart
       const mouseYPosition = event.clientY
@@ -282,7 +281,6 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
 
   @autobind
   handleDropOnProjectItem(event: DragEvent) {
-    // const elementId = event.dataTransfer?.getData('text/plain')
     if (event.dataTransfer && event.dataTransfer.types[0] === 'text/plain') {
       this.element.classList.remove('dragover')
     }
@@ -293,10 +291,7 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
     // the data is in protected mode in dragover so  event.dataTransfer.getData won't get anything
     // more details here https://stackoverflow.com/questions/31915653/how-to-get-data-from-datatransfer-getdata-in-event-dragover-or-dragenter
     event.preventDefault()    
-    const targetElementId = (event.target as HTMLElement).id;
-    if (event.currentTarget && targetElementId !== this.element.id) {
-      this.element.classList.add('dragover')
-    }
+    this.element.classList.add('dragover')
   }
 
   @autobind
@@ -337,8 +332,6 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> implements Drag
     const { top: topOfTargetElement, height } = targetElementCoordinates
     const middlePointOfTargetElement = (height / 2) + topOfTargetElement
 
-    
-
     if (topOfMovedElement >= topOfTargetElement) {
       if (topOfMovedElement <= middlePointOfTargetElement) {
         return ItemPosition.Above
@@ -374,10 +367,19 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> implements Drag
         return
       }
 
+      
+      
       // if drop target is the project Item
       const targetProjectItem = ((event.target as HTMLUListElement).closest('li') as HTMLLIElement)      
       const targetProjectItemId = targetProjectItem.id
-      const itemPosition = this.getProjectItemPostion(targetProjectItem, topOfMovedElement)      
+
+      // if the targetProjectItem is the same as the movedProjectItem
+      if (targetProjectItemId === movedProjectItemId) {
+        event.preventDefault()
+      }
+
+      const itemPosition = this.getProjectItemPostion(targetProjectItem, topOfMovedElement)   
+      
       ps.moveProject(movedProjectItemId, this.type, targetProjectItemId, itemPosition)
 
     }
