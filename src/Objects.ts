@@ -233,3 +233,255 @@ let squareOptions2 = { colour: 'red' }
 let mySquare3 = createSquare(squareOptions2) // this will throw Type { colour: string } has no properties
 // in common with type 'SquareConfig'
 
+// EXTENDING TYPES
+
+interface BasicAddress {
+  name? : string;
+  street: string;
+  city: string;
+  country: string;
+  postalCode: string;
+}
+
+// interface AddressWithUnit {
+//   name?: string;
+//   unit: string;
+//   street: string;
+//   city: string;
+//   country: string;
+//   postalCode: string
+// }
+
+// another way to write the above
+interface AddressWithUnit extends BasicAddress {
+  unit: string;
+}
+
+function ShowAddressWithUnit (): AddressWithUnit {
+  return {
+    name: '',
+    unit: '',
+    street: '',
+    city: '',
+    country: '',
+    postalCode: ''
+  }
+}
+
+// the extends keyword on an interface allows us to effectively copy members from other named types, 
+// and add whatever new members we want.
+
+// interfaces can also extend from multiple types
+
+interface Colorful {
+  color: string;
+}
+
+interface Circle {
+  radius: number;
+}
+
+interface ColorfulCircle extends Colorful, Circle {}
+
+// interface ColorfulCircle extends Circle, Colorful {} This also works
+
+const cc: ColorfulCircle = {
+  color: 'red',
+  radius: 5
+}
+
+// Intersection Types
+// Typescript provides another construct called intersection types that is mainly used 
+// to combine existing object types
+
+// An intersection type is defined using the & operator
+interface Colorful2 {
+  color: string;
+}
+
+interface Circle2 {
+  radius: number;
+}
+
+type ColorfulCircle2 = Colorful2 & Circle2;
+
+function draw(circle: ColorfulCircle2) {
+  console.log(`Color was ${circle.color}`);
+  console.log(`Radius was ${circle.radius}`);
+}
+
+draw({ color: 'red', radius: 20 }) // ok
+// draw({ color: 'red', raidus: 42 }) this throws an error (Object literal may only 
+// specify known properties, but 'raidus' does not exist in type 'Colorful & Circle'. 
+// Did you mean to write 'radius'?) because raidus is an unknown property
+// of ColorfulCircle2
+
+
+// Interface Extension vs Intersection
+// The difference between the two lies in the way they behave if there are incompatible types
+// in the same declaration e.g
+
+// if an interface is declared with same with compatible properties, there will be no error 
+// and typescript will attempt to merge them.
+
+// if the properties are not compatible (i.e they have the same property name but different types)
+// Typescript will raise an error
+
+interface Person5 {
+  name: string
+  class: string
+}
+
+interface Person5 {
+  name: string;
+  age: string;
+}
+
+const person5: Person5 = {
+  name: '',
+  age: '',
+  class: '' // if class is not added it causes an error as typescript has merged 
+  // both declarations of Person5 to contain class as a property
+}
+// There will be no error above even though there's an extra property
+
+// interface Person4 {
+//   name: number 
+// }
+
+// This will throw an error due to the first one requiring a property 
+// with a type of string whilst Person4  has a type number
+
+interface Person6 {
+  name: string;
+}
+
+interface Person7 {
+  name: number;
+}
+
+type Staff = Person6 & Person7
+
+declare const staffer: Staff;
+staffer.name; 
+// because the Staff type requires the name property to be both a string and a number, this results in the 
+// property being of type never
+
+
+
+// GENERIC OBJECT TYPES
+// if a box type can contain any value - strings, numbers, Giraffes, whatever
+
+interface Box1 {
+  contents: any
+}
+
+// the any type can lead to accidents down the line
+// unknown will offer better typing than any because it's more restrictive
+// however it will require precautionary checks in the event that you know the type of contents
+// or the use of error-prone type assertions
+
+interface Box2 {
+  contents: unknown;
+}
+
+let b: Box2 = {
+  contents: "hello world"
+}
+
+// b.contents could be checked 
+
+if (typeof b.contents === 'string') {
+  console.log(b.contents.toLowerCase());
+}
+
+// or a type assertion could be used
+console.log((b.contents as string).toLowerCase());
+
+// One type safe approach would be to instead scaffold out different Box types for every type of contents
+
+interface NumberBox {
+  contents: number
+}
+
+interface StringBox {
+  contents: string;
+}
+
+interface BooleanBox {
+  contents: boolean
+}
+
+// But that means that different functions or overloads of functions, will have to be
+// created to operate on these types
+
+function setContents(box: StringBox, newContents: string): void;
+function setContents(box: NumberBox, newContents: number): void;
+function setContents(box: BooleanBox, newContents: boolean): void;
+function setContents(box: { contents: any }, newContents: any) {
+  box.contents = newContents
+}
+
+// this impractical and in the future more types and overloads may need to be introduced
+// which will lead to messy code and frustration for the developers.
+
+
+// Culminating in a Generic object type
+
+interface Box3<T> {
+  contents: T
+}
+
+// This could be read as "A box3 of T is something who contents have type T". Later on, when Box3
+// is referred to, it will be given a type argument in place of T
+
+let b3: Box3<string>;
+
+// when typescript sees Box<string>, it will replace every instance of T in Box<T> with string
+
+let b4: Box3<string> = {
+  contents: "Hello"
+}
+
+b4.contents // prints string type
+
+// an interface can be put as Type
+interface Apple {
+  // ...
+  a: string
+}
+
+let b6: Box3<Apple> = {
+  contents: {
+    a: 'Apple'
+  }
+}
+
+// This also means that overloads can be avoided entirely and instead
+// generic functions could be used
+
+function setContents2<T>(box: Box3<T>, newContents: T) {
+  return box.contents = newContents
+}
+
+const box = {
+  contents: ''
+}
+
+setContents2<string>(box, 'yoo')
+
+// it is worth noting that type aliases can also be generic
+
+type Box<T> = {
+  contents: T
+};
+
+// since type aliases, unlike interfaces, can describe more than just object types,
+// we can also use them to write other kinds of generic helper type
+
+type orNull<T> = T | null
+type OneOrMany<T> = T | T[]
+type OneOrManyOrNull<T> = orNull<OneOrMany<T>>
+type OneOrManyOrNullStrings = OneOrManyOrNull<string>
+
+// The array type
