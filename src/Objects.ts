@@ -485,3 +485,13 @@ type OneOrManyOrNull<T> = orNull<OneOrMany<T>>
 type OneOrManyOrNullStrings = OneOrManyOrNull<string>
 
 // The array type
+// whenever you do string[] or number[], they are the short forms of Array<string> and Array<number>
+
+function doSomething2(value: Array<string>) {
+  //..
+}
+
+let myArray2: string[] = ['hello', 'world'];
+
+doSomething2(myArray2);
+doSomething2(new Array('hello', 'world'))
