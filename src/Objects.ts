@@ -362,8 +362,8 @@ interface Person7 {
 
 type Staff = Person6 & Person7
 
-declare const staffer: Staff;
-staffer.name; 
+// declare const staffer: Staff;
+// staffer.name; 
 // because the Staff type requires the name property to be both a string and a number, this results in the 
 // property being of type never
 
@@ -487,7 +487,7 @@ type OneOrManyOrNullStrings = OneOrManyOrNull<string>
 // The array type
 // whenever you do string[] or number[], they are the short forms of Array<string> and Array<number>
 
-function doSomething2(value: Array<string>) {
+function doSomething2(_value: Array<string>) {
   //..
 }
 
@@ -495,3 +495,88 @@ let myArray2: string[] = ['hello', 'world'];
 
 doSomething2(myArray2);
 doSomething2(new Array('hello', 'world'))
+
+
+interface Array<T> {
+  /* 
+    Gets or sets the length of an array;
+  */
+ length: number
+
+   /**
+   * Removes the last element from an array and returns it.
+   */
+   pop(): T | undefined;
+ 
+   /**
+    * Appends new elements to an array, and returns the new length of the array.
+    */
+   push(...items: T[]): number;
+   // ...
+}
+
+// Map, Set and Promises are also generic as because of the way they work, they can work with any type
+
+
+// ReadonlyArray
+// The ReadonlyArray is a special type that describes arrays that shouldn't be changed
+
+function doStuff(value: ReadonlyArray<string>) {
+  // we can copy from value
+  const copy = value.slice()
+  console.log('copy', copy);
+  
+
+  // however we cannot mutate values
+  // value.push('yoo') will throw an error
+}
+
+// You can only assign ReadonlyArray and not construct it
+const roArray: ReadonlyArray<string> = ["red", "green", "blue"]
+
+// Just as Typescript offers a short hand of T[] for Array<T>, it also offers readonly string[]
+// for ReadonlyArray<string>
+
+const strArray: readonly string[] = ['22', 'a', 'true']
+
+// unlike the readonly property modifier, assignability isn’t bidirectional between regular Arrays and ReadonlyArrays.
+
+let rs: readonly string[] = [];
+let os: string[] = [];
+ 
+rs = os;
+os.push('meh')
+
+console.log('rs', rs);
+
+// os = rs; this will throw an error
+
+// Tuple Type
+// A tuple type is another sort of array that knows exactly how many elements it contains
+// and exactly which types it contains at specific positions
+
+type StringNumberPair = [string, number]
+
+function doSomething3(_pair: StringNumberPair) {
+  // const a = pair[0] a will be a string
+
+  // const b = pair[1] b will be a number
+
+  // const c = pair[2] this will throw an error because it exceeds the number of 
+  // elements specified
+
+ 
+}
+
+doSomething3(['hello', 223])
+
+
+ // Tuples can be destructured using JavaScript’s array destructuring.
+
+function doSomething4(stringHash: StringNumberPair) {
+  const [inputString, hash] = stringHash;
+  console.log('inputString', inputString);                   
+  console.log('hash', hash);             
+}
+
+doSomething4(['2000', 2000])
