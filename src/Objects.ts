@@ -580,3 +580,83 @@ function doSomething4(stringHash: StringNumberPair) {
 }
 
 doSomething4(['2000', 2000])
+
+
+interface StringNumberPair2 {
+  length: 2;
+  0: string;
+  1: number;
+
+  // other "Array<string | number>" members ...
+  slice(start? : number, end?: number): Array<string | number>;
+}
+
+// Tuples can have optional properties by writing out a question mark (? after an element's type)
+// Optional tuple elements can only come at the end and also affect the type of length
+
+
+type Either2dOr3d = [number, number, number?]
+
+function setCoordinate(_coord: Either2dOr3d) {
+  // const [x, y, z] = coord  z will show as number|undefined
+  // console.log(`Provided coordinates had ${coord.length} dimnesions`);  length will show 2|3 
+  // because of the optional property
+} 
+
+// Tuples can also have rest elements, which have to be an array/tuple type.
+
+type StringNumberBooleans = [string, number, ...boolean[]]
+type StringBooleansNumber = [string, ...boolean[], number]
+type BooleansStringNumber = [...boolean[], string, number]
+
+
+const stringNumberBooleans: StringNumberBooleans = ['a', 3] // this will work because rest elements can be empty
+const stringNumberBooleans2: StringNumberBooleans = ['a', 3, true, true, false, false]
+
+// optional and rest elements allow TypeScript to correspond tuples with parameter lists. 
+// Tuples type can be used in rest parameters and arguments so that the following
+
+
+function readButtonInput(...args: [string, number, ...boolean[]]) {
+  // const [name, version, ...input] = args;
+  // ...
+}
+
+// is basically equivalent to
+
+function readButtonInput2(_name: string, _version: number, ..._input: boolean[]) {
+  //...
+}
+
+// This is handy when you want to take a variable number of arguments with a rest parameter 
+// and you need a minimum number of elements, but you don't want to introduce intermediate 
+// variables
+
+// readonly Tuple Types
+// tuple types have readonly variants and can be specified by sticking a readonly modifier in front of them
+
+function doSomething5(pair: readonly [string, number]) {
+  // ...
+  // Writing a property to a readonly tuple is not allowed
+  // pair[0] = 2 this will throw an error because writing a property to a readonly tuple is not
+  // allowed
+  // Cannot assign to '0' because it is a read-only property.
+
+}
+
+
+// Array literals with const assertions will be inferred with readonly tuple types
+// e.g
+
+const point = [3, 4] as const
+// point[0] = 1 this will throw an error as it is readonly
+
+function distanceFromOrigin([x, y]: [number, number]) {
+  return Math.sqrt(x**2 + y**2)
+}
+
+// distanceFromOrigin(point)  this will throw an error because point is immutable and 
+// distanceFromOrigin expects a mutable tuple
+
+// Since point’s type was inferred as readonly [3, 4], it won’t be compatible 
+// with [number, number] since that type can’t guarantee point’s elements won’t be mutated.
