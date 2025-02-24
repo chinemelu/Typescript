@@ -362,8 +362,8 @@ interface Person7 {
 
 type Staff = Person6 & Person7
 
-declare const staffer: Staff;
-staffer.name; 
+// declare const staffer: Staff;
+// staffer.name; 
 // because the Staff type requires the name property to be both a string and a number, this results in the 
 // property being of type never
 
@@ -485,3 +485,178 @@ type OneOrManyOrNull<T> = orNull<OneOrMany<T>>
 type OneOrManyOrNullStrings = OneOrManyOrNull<string>
 
 // The array type
+// whenever you do string[] or number[], they are the short forms of Array<string> and Array<number>
+
+function doSomething2(_value: Array<string>) {
+  //..
+}
+
+let myArray2: string[] = ['hello', 'world'];
+
+doSomething2(myArray2);
+doSomething2(new Array('hello', 'world'))
+
+
+interface Array<T> {
+  /* 
+    Gets or sets the length of an array;
+  */
+ length: number
+
+   /**
+   * Removes the last element from an array and returns it.
+   */
+   pop(): T | undefined;
+ 
+   /**
+    * Appends new elements to an array, and returns the new length of the array.
+    */
+   push(...items: T[]): number;
+   // ...
+}
+
+// Map, Set and Promises are also generic as because of the way they work, they can work with any type
+
+
+// ReadonlyArray
+// The ReadonlyArray is a special type that describes arrays that shouldn't be changed
+
+function doStuff(value: ReadonlyArray<string>) {
+  // we can copy from value
+  const copy = value.slice()
+  console.log('copy', copy);
+  
+
+  // however we cannot mutate values
+  // value.push('yoo') will throw an error
+}
+
+// You can only assign ReadonlyArray and not construct it
+const roArray: ReadonlyArray<string> = ["red", "green", "blue"]
+
+// Just as Typescript offers a short hand of T[] for Array<T>, it also offers readonly string[]
+// for ReadonlyArray<string>
+
+const strArray: readonly string[] = ['22', 'a', 'true']
+
+// unlike the readonly property modifier, assignability isn’t bidirectional between regular Arrays and ReadonlyArrays.
+
+let rs: readonly string[] = [];
+let os: string[] = [];
+ 
+rs = os;
+os.push('meh')
+
+console.log('rs', rs);
+
+// os = rs; this will throw an error
+
+// Tuple Type
+// A tuple type is another sort of array that knows exactly how many elements it contains
+// and exactly which types it contains at specific positions
+
+type StringNumberPair = [string, number]
+
+function doSomething3(_pair: StringNumberPair) {
+  // const a = pair[0] a will be a string
+
+  // const b = pair[1] b will be a number
+
+  // const c = pair[2] this will throw an error because it exceeds the number of 
+  // elements specified
+
+ 
+}
+
+doSomething3(['hello', 223])
+
+
+ // Tuples can be destructured using JavaScript’s array destructuring.
+
+function doSomething4(stringHash: StringNumberPair) {
+  const [inputString, hash] = stringHash;
+  console.log('inputString', inputString);                   
+  console.log('hash', hash);             
+}
+
+doSomething4(['2000', 2000])
+
+
+interface StringNumberPair2 {
+  length: 2;
+  0: string;
+  1: number;
+
+  // other "Array<string | number>" members ...
+  slice(start? : number, end?: number): Array<string | number>;
+}
+
+// Tuples can have optional properties by writing out a question mark (? after an element's type)
+// Optional tuple elements can only come at the end and also affect the type of length
+
+
+type Either2dOr3d = [number, number, number?]
+
+function setCoordinate(_coord: Either2dOr3d) {
+  // const [x, y, z] = coord  z will show as number|undefined
+  // console.log(`Provided coordinates had ${coord.length} dimnesions`);  length will show 2|3 
+  // because of the optional property
+} 
+
+// Tuples can also have rest elements, which have to be an array/tuple type.
+
+type StringNumberBooleans = [string, number, ...boolean[]]
+type StringBooleansNumber = [string, ...boolean[], number]
+type BooleansStringNumber = [...boolean[], string, number]
+
+
+const stringNumberBooleans: StringNumberBooleans = ['a', 3] // this will work because rest elements can be empty
+const stringNumberBooleans2: StringNumberBooleans = ['a', 3, true, true, false, false]
+
+// optional and rest elements allow TypeScript to correspond tuples with parameter lists. 
+// Tuples type can be used in rest parameters and arguments so that the following
+
+
+function readButtonInput(...args: [string, number, ...boolean[]]) {
+  // const [name, version, ...input] = args;
+  // ...
+}
+
+// is basically equivalent to
+
+function readButtonInput2(_name: string, _version: number, ..._input: boolean[]) {
+  //...
+}
+
+// This is handy when you want to take a variable number of arguments with a rest parameter 
+// and you need a minimum number of elements, but you don't want to introduce intermediate 
+// variables
+
+// readonly Tuple Types
+// tuple types have readonly variants and can be specified by sticking a readonly modifier in front of them
+
+function doSomething5(pair: readonly [string, number]) {
+  // ...
+  // Writing a property to a readonly tuple is not allowed
+  // pair[0] = 2 this will throw an error because writing a property to a readonly tuple is not
+  // allowed
+  // Cannot assign to '0' because it is a read-only property.
+
+}
+
+
+// Array literals with const assertions will be inferred with readonly tuple types
+// e.g
+
+const point = [3, 4] as const
+// point[0] = 1 this will throw an error as it is readonly
+
+function distanceFromOrigin([x, y]: [number, number]) {
+  return Math.sqrt(x**2 + y**2)
+}
+
+// distanceFromOrigin(point)  this will throw an error because point is immutable and 
+// distanceFromOrigin expects a mutable tuple
+
+// Since point’s type was inferred as readonly [3, 4], it won’t be compatible 
+// with [number, number] since that type can’t guarantee point’s elements won’t be mutated.
