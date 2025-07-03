@@ -1,7 +1,7 @@
-import { Draggable } from "../models/drag-drop";
-import { Component } from '../components/base-components'
-import { Project } from '../models/project'
-import { autobind } from "../decorators/autobind";
+import { Draggable } from "../models/drag-drop.js";
+import { Component } from '../components/base-components.js'
+import { Project } from '../models/project.js'
+import { autobind } from "../decorators/autobind.js";
 
 export interface DataTransferObject {
     projectItemId: string;

@@ -1,4 +1,4 @@
-import { Project, ProjectStatus } from "../models/project"
+import { Project, ProjectStatus } from "../models/project.js"
 
 class State<T> {
   // protected is similar to private but it is accessible in every inherited class

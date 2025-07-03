@@ -1,5 +1,5 @@
 
-import { insertPosition } from "../state/project-state"
+import { insertPosition } from "../state/project-state.js"
 
 // component Base Class
 // you make it abstract because you don't ever want it to be instantiated

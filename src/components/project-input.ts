@@ -1,7 +1,7 @@
-import { Component } from "./base-components";
-import { Validation, validate } from "../util/validation";
-import { autobind } from "../decorators/autobind";
-import { ps } from "../state/project-state";
+import { Component } from "./base-components.js";
+import { Validation, validate } from "../util/validation.js";
+import { autobind } from "../decorators/autobind.js";
+import { ps } from "../state/project-state.js";
 
 // ProjectInput Class
 // this class will be responsible for fetching the input
